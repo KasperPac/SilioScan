@@ -11,7 +11,7 @@
 //   • All state transitions fire 'connectionChange'
 // ============================================================
 
-import { EventEmitter } from 'events';
+import EventEmitter from 'events';
 import TcpSocket from 'react-native-tcp-socket';
 import { encode, FrameDecoder } from './FrameCodec';
 import {

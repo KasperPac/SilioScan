@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Silio launcher icon foreground — silo glyph from public/silio.svg.
+  Adaptive icon foreground viewport is 108x108dp. Launchers add their
+  own parallax zoom on top of the mask, so the silo is rendered at
+  scale 0.45 (54x54) with 27dp padding to leave breathing room within
+  the inner safe zone.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.4"
+        android:scaleY="0.4"
+        android:translateX="30"
+        android:translateY="30">
+        <path
+            android:fillType="evenOdd"
+            android:fillColor="#D89E3C"
+            android:pathData="M 5 120 Q 0 120 0 115 L 0 60 Q 0 0 60 0 Q 120 0 120 60 L 120 115 Q 120 120 115 120 Z M 38 55 A 22 22 0 1 0 82 55 A 22 22 0 1 0 38 55 Z" />
+    </group>
+</vector>

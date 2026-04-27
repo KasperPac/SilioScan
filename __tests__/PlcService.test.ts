@@ -13,7 +13,7 @@
 // cross-test leakage via real-setImmediate deferred events.
 // ============================================================
 
-import { EventEmitter } from 'events';
+import EventEmitter from 'events';
 import { PlcService, ConnectionState } from '../src/services/PlcService';
 import { encode } from '../src/services/FrameCodec';
 import {

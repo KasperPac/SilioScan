@@ -9,7 +9,7 @@
 //              CameraScanner component calling scannerService.reportCameraBarcode()
 //
 // Usage:
-//   scannerService.configure('com.symbol.datawedge.api.ACTION');
+//   scannerService.configure('com.pacscanner.SCAN');
 //   scannerService.switchMode('hardware');
 //   const off = scannerService.onBarcode((code) => { ... });
 //   // later:
@@ -45,11 +45,13 @@ class ScannerService {
   // ── Public API ──────────────────────────────────────────────
 
   /**
-   * Pass the vendor intent action string to the native BroadcastReceiver.
-   * Must be called before hardware scanning will work.
+   * Pass the broadcast action emitted by the device's scan service to the
+   * native BroadcastReceiver. Must be called before hardware scanning works.
    *
-   * Example actions:
-   *   'com.symbol.datawedge.api.ACTION'              — Zebra DataWedge
+   * For Zebra (TC22), this is the action configured in the DataWedge profile's
+   * Intent Output — a project-specific string we own, not a vendor constant.
+   * Other vendors expose their own conventions:
+   *   'com.pacscanner.SCAN'                          — Zebra DataWedge (this app)
    *   'com.honeywell.aidc.action.ACTION_CLAIM_SCANNER' — Honeywell
    *   'com.datalogic.decode.action.DECODE'           — Datalogic
    */

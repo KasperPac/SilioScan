@@ -19,12 +19,16 @@
 
 import React, { useCallback, useEffect, useRef } from 'react';
 import {
+  Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/AppNavigator';
 import BatchHeader from '../components/BatchHeader';
 import ConnectionBadge from '../components/ConnectionBadge';
 import IngredientDetail from '../components/IngredientDetail';
@@ -63,6 +67,9 @@ export default function PickingScreen(): React.JSX.Element {
 
   const { status, setStatus } = useConnectionStore();
   const { scannerMode } = useSettingsStore();
+
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const openSettings = useCallback(() => navigation.navigate('Settings'), [navigation]);
 
   // ── Refs ──────────────────────────────────────────────────────
   // Tracks whether the current NFC read is still relevant
@@ -271,6 +278,20 @@ export default function PickingScreen(): React.JSX.Element {
   if (batchStatus === 'idle') {
     return (
       <SafeAreaView style={styles.root}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open menu"
+          hitSlop={12}
+          onPress={openSettings}
+          style={({ pressed }) => [
+            styles.menuButton,
+            pressed && styles.menuButtonPressed,
+          ]}
+        >
+          <View style={styles.menuLine} />
+          <View style={styles.menuLine} />
+          <View style={styles.menuLine} />
+        </Pressable>
         <View style={styles.waiting}>
           <Text style={styles.waitingTitle}>Awaiting batch…</Text>
           <Text style={styles.waitingBody}>
@@ -457,6 +478,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 32,
     backgroundColor: '#1a2744',
+  },
+  menuButton: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    justifyContent: 'space-between',
+  },
+  menuButtonPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+  },
+  menuLine: {
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: '#ffffff',
   },
   waitingTitle: {
     color: '#ffffff',

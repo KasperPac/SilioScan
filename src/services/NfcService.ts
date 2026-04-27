@@ -2,8 +2,9 @@
 // NfcService.ts — NFC tag UID read for operator sign-off
 // ARCHITECTURE.md §8.2
 //
-// Tags: HF 13.56 MHz (MIFARE/NTAG) — NFC-A compatible Android
-// Operator ID: tag UID, hex string, max 16 chars
+// Tags: ISO/IEC 15693 (HF 13.56 MHz, "Vicinity") — Android NfcV technology.
+// Hardware: Zebra TC22 — integrated NFC reader supports ISO 15693.
+// Operator ID: tag UID, hex string, exactly 16 chars (8-byte UID).
 //   → maps to the 16-byte operatorId field in INGREDIENT_SIGNOFF
 //
 // Flow:
@@ -19,7 +20,7 @@
 //   'tagError'    (err: Error)   — read failed or was cancelled
 // ============================================================
 
-import { EventEmitter } from 'events';
+import EventEmitter from 'events';
 import NfcManager, { NfcEvents, NfcTech, type TagEvent } from 'react-native-nfc-manager';
 
 // ── Error types ───────────────────────────────────────────────
@@ -142,11 +143,13 @@ class NfcService extends EventEmitter {
         });
       }, READ_TIMEOUT_MS);
 
-      // Request technology — suspends until a tag is tapped
-      NfcManager.requestTechnology(
-        [NfcTech.NfcA, NfcTech.Ndef],
-        { invalidateAfterFirstRead: true },
-      )
+      // Request technology — suspends until a tag is tapped.
+      // ISO 15693 tags expose NfcV; we don't request Ndef because industrial
+      // 15693 tags (e.g. ICODE SLIX) typically aren't NDEF-formatted and we
+      // only need the UID for operator identification.
+      NfcManager.requestTechnology(NfcTech.NfcV, {
+        invalidateAfterFirstRead: true,
+      })
         .then(() => NfcManager.getTag())
         .then((tag: TagEvent | null) => {
           this._clearTimeout();
@@ -191,12 +194,12 @@ class NfcService extends EventEmitter {
 /**
  * Extract and normalise the tag UID from a TagEvent.
  *
- * Android returns id as a colon-separated hex string: "04:AB:CD:EF:01:23:45"
+ * Android returns id as a colon-separated hex string: "E0:04:01:50:12:34:56:78"
  * We strip colons and lowercase, then truncate to OPERATOR_ID_MAX_LEN.
  *
- * A 4-byte UID  → 8 hex chars  (MIFARE Classic, many NTAG)
- * A 7-byte UID  → 14 hex chars (NTAG213/215/216)
- * A 10-byte UID → 20 hex chars (rare) → truncated to 16
+ * ISO 15693 UIDs are exactly 8 bytes (16 hex chars) — fits OPERATOR_ID_MAX_LEN
+ * with no truncation. Byte 0 is always 0xE0 (per spec), byte 1 is the
+ * manufacturer code, bytes 2-7 are the unique serial.
  */
 function extractUid(tag: TagEvent | null): string {
   const raw = tag?.id ?? '';

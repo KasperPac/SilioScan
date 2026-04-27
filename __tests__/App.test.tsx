@@ -50,6 +50,18 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
+jest.mock('@react-navigation/native', () => ({
+  NavigationContainer: ({ children }: { children: React.ReactNode }) => children,
+  useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn() }),
+}));
+
+jest.mock('@react-navigation/native-stack', () => ({
+  createNativeStackNavigator: () => ({
+    Navigator: ({ children }: { children: React.ReactNode }) => children,
+    Screen: ({ component: Component }: { component: React.ComponentType }) => <Component />,
+  }),
+}));
+
 jest.mock('react-native-vision-camera', () => ({
   Camera: 'Camera',
   useCameraDevice: jest.fn(() => null),
@@ -65,7 +77,7 @@ jest.mock('react-native-nfc-manager', () => ({
     setEventListener: jest.fn(),
   },
   NfcEvents: { DiscoverTag: 'NfcManagerDiscoverTag', SessionClosed: 'NfcManagerSessionClosed', StateChanged: 'NfcManagerStateChanged' },
-  NfcTech: { Ndef: 'Ndef', NfcA: 'NfcA' },
+  NfcTech: { Ndef: 'Ndef', NfcA: 'NfcA', NfcV: 'NfcV' },
 }));
 
 // ── Test ──────────────────────────────────────────────────────

@@ -534,14 +534,22 @@ IDLE --> AWAITING_SCAN --> VALIDATING --> GIN_VALID --> AWAITING_BAG_COUNT
 ## 8. Key Implementation Notes
 
 ### 8.1 Hardware Scanner
+- Target device: **Zebra TC22** (integrated SE4710 imager)
 - Native Kotlin BroadcastReceiver bridge (~50 lines)
 - Configurable intent action string (per vendor)
-- Common: Zebra DataWedge, Honeywell, Datalogic
+- DataWedge profile (Zebra): bind to `com.pacscanner` package, Intent Output enabled,
+  action `com.pacscanner.SCAN`, delivery = Broadcast, decoder data extra = string
+- App receives the broadcast, reads `com.symbol.datawedge.data_string` extra
 - No vendor SDK needed — just intent/broadcast
+- Other vendors (Honeywell, Datalogic) supported via Settings → Advanced → intent action
 
 ### 8.2 NFC (react-native-nfc-manager)
-- Tags are HF 13.56 MHz (MIFARE/NTAG) — Android NFC compatible
-- Read the tag UID (unique identifier) — this IS the operator ID
+- Tags are **ISO/IEC 15693** (HF 13.56 MHz "Vicinity") — Android NfcV technology
+- TC22 NFC reader supports ISO 15693 natively
+- AndroidManifest: `android.permission.NFC` + `<uses-feature android:name="android.hardware.nfc">`
+- Read the tag UID (8 bytes, 16 hex chars) — this IS the operator ID
+- UID structure per ISO 15693: byte 0 = 0xE0, byte 1 = manufacturer code, bytes 2-7 = serial
+- We request only `NfcTech.NfcV` — no NDEF (industrial 15693 tags typically aren't NDEF-formatted)
 - NFC read triggers INGREDIENT_SIGNOFF message to PLC
 - If NFC read fails, show retry prompt
 

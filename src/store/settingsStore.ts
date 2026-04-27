@@ -27,7 +27,11 @@ interface SettingsState {
   scannerMode: ScannerMode;
   heartbeatIntervalSec: number;
 
-  /** Configurable per vendor — e.g. Zebra DataWedge, Honeywell, Datalogic. */
+  /**
+   * Broadcast action emitted by the device's scan service.
+   * Default targets a DataWedge profile (Zebra TC22) configured to broadcast
+   * scans on `com.pacscanner.SCAN`. Override per vendor as needed.
+   */
   hwScannerIntentAction: string;
 
   setPlcIp: (ip: string) => void;
@@ -46,7 +50,7 @@ export const useSettingsStore = create<SettingsState>()(
       plcPort: 8500,
       scannerMode: 'auto',
       heartbeatIntervalSec: 5,
-      hwScannerIntentAction: 'com.symbol.datawedge.api.ACTION',
+      hwScannerIntentAction: 'com.pacscanner.SCAN',
 
       setPlcIp: (plcIp) => set({ plcIp }),
       setPlcPort: (plcPort) => set({ plcPort }),

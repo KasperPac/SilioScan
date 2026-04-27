@@ -314,7 +314,7 @@ export default function SettingsScreen(): React.JSX.Element {
             autoCapitalize="none"
             autoCorrect={false}
             onChangeText={setDraftIntentAction}
-            placeholder="com.symbol.datawedge.api.ACTION"
+            placeholder="com.pacscanner.SCAN"
             placeholderTextColor="#7f8795"
             style={[styles.input, styles.inputMultiline]}
             value={draftIntentAction}
