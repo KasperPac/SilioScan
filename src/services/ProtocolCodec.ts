@@ -33,10 +33,13 @@ function writeAscii(buf: Buffer, offset: number, str: string, len: number): void
 }
 
 function readAscii(buf: Buffer, offset: number, len: number): string {
-  const slice = buf.subarray(offset, offset + len);
-  const nullIdx = slice.indexOf(0);
-  const end = nullIdx === -1 ? len : nullIdx;
-  return slice.subarray(0, end).toString('ascii');
+  let result = '';
+  for (let i = offset; i < offset + len; i++) {
+    const byte = buf[i];
+    if (byte === 0) break;
+    result += String.fromCharCode(byte);
+  }
+  return result;
 }
 
 // ----------------------------------------------------------------
@@ -51,7 +54,8 @@ function readAscii(buf: Buffer, offset: number, len: number): string {
 // Byte 68+      : ingredients × 48 bytes each
 //                   [0–31]  ingredientName (32 bytes)
 //                   [32–33] requiredBags (uint16BE)
-//                   [34–47] reserved (14 bytes)
+//                   [34]    signedOff (0x00=no, 0x01=yes)
+//                   [35–47] reserved (13 bytes)
 // ----------------------------------------------------------------
 
 const INGREDIENT_RECORD_SIZE = 48;
@@ -88,6 +92,7 @@ export function decodeBatchRecipe(payload: Buffer): BatchRecipeMsg {
     ingredients.push({
       ingredientName: readAscii(payload, base, 32),
       requiredBags: payload.readUInt16BE(base + 32),
+      signedOff: payload[base + 34] === 0x01,
     });
   }
 

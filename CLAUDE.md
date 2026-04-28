@@ -21,6 +21,12 @@ react-native-nfc-manager, react-native-vision-camera, react-native-mmkv
 - Read ARCHITECTURE.md Section 3 before touching protocol code
 - Binary structs must match Omron UDTs exactly (big-endian, null-padded ASCII)
 - NFC tag UID = operator ID (16 bytes, null-padded)
-- Max 5 GINs per ingredient, bag count 1-5 per GIN
+- Max 5 GINs per ingredient, bag count is unlimited per GIN (uint16)
 - All state changes go through Zustand stores
 - No Expo modules — bare workflow only
+
+## Versioning
+On every minor or major change, update ALL THREE in lockstep:
+- `src/version.ts` — APP_VERSION (semver) and BUILD_NUMBER (integer, increment by 1)
+- `package.json` — version field
+- `android/app/build.gradle` — versionName (semver) and versionCode (integer, increment by 1)

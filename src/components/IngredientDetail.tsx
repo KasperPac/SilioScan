@@ -4,8 +4,8 @@
 // Phase-driven rendering: content changes with pickingStore phase.
 // ============================================================
 
-import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { IngredientProgress } from '../store/batchStore';
 import type { PickingPhase } from '../store/pickingStore';
 import type { ScannerMode } from '../store/settingsStore';
@@ -19,6 +19,8 @@ interface Props {
   pendingGin: string | null;
   scannerMode: ScannerMode;
   onBagCountSelected: (count: number) => void;
+  onManualGin: (gin: string) => void;
+  onInputFocus: () => void;
 }
 
 export default function IngredientDetail({
@@ -27,11 +29,13 @@ export default function IngredientDetail({
   pendingGin,
   scannerMode,
   onBagCountSelected,
+  onManualGin,
+  onInputFocus,
 }: Props): React.JSX.Element {
   const { name, requiredBags, collectedBags, ginEntries } = ingredient;
+  const [manualGin, setManualGin] = useState('');
   const progressPct = requiredBags > 0 ? Math.min(1, collectedBags / requiredBags) : 0;
   const bagsRemaining = Math.max(0, requiredBags - collectedBags);
-  const maxSelectable = Math.min(5, bagsRemaining);
 
   const showCamera =
     (scannerMode === 'camera' || scannerMode === 'auto') &&
@@ -75,10 +79,38 @@ export default function IngredientDetail({
         <CameraScanner active={phase === 'AWAITING_SCAN'} />
       )}
 
-      {/* Awaiting scan — HW mode hint */}
-      {phase === 'AWAITING_SCAN' && scannerMode === 'hardware' && (
+      {/* Awaiting scan — HW mode hint + manual entry */}
+      {phase === 'AWAITING_SCAN' && (
         <View style={styles.hwHint}>
-          <Text style={styles.hwHintText}>Scan next GIN barcode with scanner</Text>
+          <Text style={styles.hwHintText}>
+            {scannerMode === 'camera' ? 'Scan next GIN barcode with camera' : 'Scan next GIN barcode with scanner'}
+          </Text>
+          <View style={styles.manualRow}>
+            <TextInput
+              style={styles.manualInput}
+              placeholder="Or type GIN…"
+              placeholderTextColor="#7f8795"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              value={manualGin}
+              onChangeText={setManualGin}
+              onFocus={onInputFocus}
+              onSubmitEditing={() => {
+                const gin = manualGin.trim();
+                if (gin) { onManualGin(gin); setManualGin(''); }
+              }}
+              returnKeyType="done"
+            />
+            <Pressable
+              style={({ pressed }) => [styles.manualButton, pressed && styles.manualButtonPressed]}
+              onPress={() => {
+                const gin = manualGin.trim();
+                if (gin) { onManualGin(gin); setManualGin(''); }
+              }}
+            >
+              <Text style={styles.manualButtonText}>Confirm</Text>
+            </Pressable>
+          </View>
         </View>
       )}
 
@@ -98,7 +130,7 @@ export default function IngredientDetail({
           <Text style={styles.bagCountLabel}>
             Bags for GIN {pendingGin}:
           </Text>
-          <BagCountSelector maxSelectable={maxSelectable} onSelect={onBagCountSelected} />
+          <BagCountSelector bagsRemaining={bagsRemaining} onSelect={onBagCountSelected} />
         </View>
       )}
 
@@ -211,12 +243,44 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#c5d5f5',
+    gap: 10,
   },
   hwHintText: {
     fontSize: 14,
     color: '#3a5a9a',
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  manualRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  manualInput: {
+    flex: 1,
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#c5d5f5',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#ffffff',
+    fontSize: 15,
+    color: '#152033',
+  },
+  manualButton: {
+    height: 44,
+    paddingHorizontal: 16,
+    backgroundColor: '#1a2744',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manualButtonPressed: {
+    backgroundColor: '#263960',
+  },
+  manualButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
   },
   signoffPrompt: {
     marginTop: 12,

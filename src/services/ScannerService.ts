@@ -88,10 +88,9 @@ class ScannerService {
 
   /**
    * Called by the CameraScanner component when vision-camera detects a code.
-   * Forwards to callbacks only when mode === 'camera'.
+   * Always forwarded — CameraScanner is only rendered when appropriate.
    */
   reportCameraBarcode(barcode: string): void {
-    if (this.mode !== 'camera') return;
     this._emit(barcode);
   }
 
@@ -119,9 +118,7 @@ class ScannerService {
     this.hwSubscription = DeviceEventEmitter.addListener(
       'onBarcodeScanned',
       (barcode: string) => {
-        if (this.mode === 'hardware') {
-          this._emit(barcode);
-        }
+        this._emit(barcode);
       },
     );
   }

@@ -29,7 +29,8 @@ export type MsgType = (typeof MSG_TYPE)[keyof typeof MSG_TYPE];
 export interface IngredientRecord {
   ingredientName: string; // 32 bytes, null-padded ASCII
   requiredBags: number;   // UINT (uint16BE)
-  // 14 bytes reserved — not surfaced
+  signedOff: boolean;     // byte [34]: 0x01 = already signed off on PLC
+  // 13 bytes reserved — not surfaced
 }
 
 /** BATCH_RECIPE (0x80) — PLC pushes when batch selected on HMI. */

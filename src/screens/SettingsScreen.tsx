@@ -14,6 +14,7 @@ import type { NavigationProp } from '@react-navigation/native';
 
 import { plcService } from '../services/PlcService';
 import { ScannerMode, useSettingsStore } from '../store/settingsStore';
+import { APP_VERSION, BUILD_NUMBER } from '../version';
 
 const HEARTBEAT_MIN = 1;
 const HEARTBEAT_MAX = 10;
@@ -336,6 +337,8 @@ export default function SettingsScreen(): React.JSX.Element {
         ]}>
           <Text style={styles.primaryButtonText}>Save</Text>
         </Pressable>
+
+        <Text style={styles.versionText}>v{APP_VERSION} ({BUILD_NUMBER})</Text>
       </ScrollView>
     </View>
   );
@@ -525,5 +528,11 @@ const styles = StyleSheet.create({
   },
   sliderMarkerTextActive: {
     color: '#1a2744',
+  },
+  versionText: {
+    marginTop: 20,
+    textAlign: 'center',
+    fontSize: 13,
+    color: '#9aa3b0',
   },
 });

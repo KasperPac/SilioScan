@@ -64,21 +64,24 @@ const EMPTY: Omit<BatchState,
 export const useBatchStore = create<BatchState>()((set, get) => ({
   ...EMPTY,
 
-  setBatchRecipe: (recipe) =>
+  setBatchRecipe: (recipe) => {
+    const ingredients = recipe.ingredients.map((ing) => ({
+      name: ing.ingredientName,
+      requiredBags: ing.requiredBags,
+      collectedBags: ing.signedOff ? ing.requiredBags : 0,
+      ginEntries: [],
+      signedOff: ing.signedOff,
+      operatorId: null,
+    }));
+    const allDone = ingredients.length > 0 && ingredients.every((ing) => ing.signedOff);
     set({
       productCode: recipe.productCode,
       batchNo: recipe.batchNo,
       description: recipe.productDescription,
-      batchStatus: 'active',
-      ingredients: recipe.ingredients.map((ing) => ({
-        name: ing.ingredientName,
-        requiredBags: ing.requiredBags,
-        collectedBags: 0,
-        ginEntries: [],
-        signedOff: false,
-        operatorId: null,
-      })),
-    }),
+      batchStatus: allDone ? 'complete' : 'active',
+      ingredients,
+    });
+  },
 
   updateIngredientProgress: (index, entry) =>
     set((state) => ({

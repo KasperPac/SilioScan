@@ -20,12 +20,12 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/AppNavigator';
@@ -74,6 +74,7 @@ export default function PickingScreen(): React.JSX.Element {
   // ── Refs ──────────────────────────────────────────────────────
   // Tracks whether the current NFC read is still relevant
   const nfcActiveRef = useRef(false);
+  const detailScrollRef = useRef<ScrollView>(null);
 
   // ── PlcService events ─────────────────────────────────────────
 
@@ -310,6 +311,7 @@ export default function PickingScreen(): React.JSX.Element {
         productCode={productCode}
         batchNo={batchNo}
         description={description}
+        onSettings={openSettings}
       />
 
       {/* ── Main content ──────────────────────────────────── */}
@@ -328,6 +330,7 @@ export default function PickingScreen(): React.JSX.Element {
 
         {/* Ingredient detail — lower portion */}
         <ScrollView
+          ref={detailScrollRef}
           style={styles.detailPane}
           contentContainerStyle={styles.detailContent}
           keyboardShouldPersistTaps="handled"
@@ -339,6 +342,8 @@ export default function PickingScreen(): React.JSX.Element {
               pendingGin={pendingGin}
               scannerMode={scannerMode}
               onBagCountSelected={handleBagCountSelected}
+              onManualGin={handleGinScanned}
+              onInputFocus={() => setTimeout(() => detailScrollRef.current?.scrollToEnd({ animated: true }), 100)}
             />
           ) : (
             <View style={styles.noSelection}>
@@ -441,10 +446,11 @@ function BatchCompletePanel({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#f4f6fb',
+    backgroundColor: '#1a2744',
   },
   body: {
     flex: 1,
+    backgroundColor: '#f4f6fb',
   },
   listPane: {
     maxHeight: '45%',

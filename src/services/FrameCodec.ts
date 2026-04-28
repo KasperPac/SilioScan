@@ -52,7 +52,7 @@ export class FrameDecoder {
 
       if (stxIndex > 0) {
         // Garbage bytes before STX — skip them
-        this.buf = this.buf.subarray(stxIndex);
+        this.buf = Buffer.from(this.buf.subarray(stxIndex));
       }
 
       // ── 2. Need at least a full header ─────────────────────
@@ -72,7 +72,7 @@ export class FrameDecoder {
       // ── 5. Extract payload and advance buffer ──────────────
       const payload = Buffer.from(this.buf.subarray(HEADER_SIZE, totalSize));
       frames.push(payload);
-      this.buf = this.buf.subarray(totalSize);
+      this.buf = Buffer.from(this.buf.subarray(totalSize));
     }
 
     return frames;
