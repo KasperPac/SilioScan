@@ -82,6 +82,9 @@ app.get('/batches/:batch', h(async (req, res) => {
   const orderErr = spErr(orderRes.recordset);
   if (orderErr) { res.status(404).json({ error: orderErr }); return; }
 
+  console.log('[debug] ingredient columns:', Object.keys(linesRes.recordset[0] ?? {}));
+  console.log('[debug] ingredient sample:', linesRes.recordset[0]);
+
   res.json({
     order: orderRes.recordset[0] ?? null,
     ingredients: linesRes.recordset.filter((r: Record<string, unknown>) => r.Room === HANDTIP_ROOM),
