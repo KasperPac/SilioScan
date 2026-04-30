@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -23,6 +24,7 @@ export default function BatchSelectScreen(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [loadingBatch, setLoadingBatch] = useState<number | null>(null);
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const { loadFromSql } = useBatchStore();
   const { reset: resetPicking } = usePickingStore();
@@ -56,6 +58,10 @@ export default function BatchSelectScreen(): React.JSX.Element {
     }
   }, [loadFromSql, resetPicking, navigation]);
 
+  const displayedBatches = hideCompleted
+    ? batches.filter((b) => !b.handtip_complete)
+    : batches;
+
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
@@ -64,30 +70,47 @@ export default function BatchSelectScreen(): React.JSX.Element {
           <Pressable
             onPress={fetchBatches}
             disabled={loading}
-            style={({ pressed }) => [styles.refreshButton, pressed && styles.refreshButtonPressed]}
+            style={({ pressed }) => [styles.headerBtn, pressed && styles.headerBtnPressed]}
           >
-            <Text style={styles.refreshText}>Refresh</Text>
+            <Text style={styles.headerBtnText}>Refresh</Text>
           </Pressable>
           <Pressable
-            onPress={() => setHideCompleted((v) => !v)}
-            style={({ pressed }) => [
-              styles.refreshButton,
-              hideCompleted && styles.refreshButtonActive,
-              pressed && styles.refreshButtonPressed,
-            ]}
+            onPress={() => setMenuOpen(true)}
+            style={({ pressed }) => [styles.headerBtn, pressed && styles.headerBtnPressed]}
           >
-            <Text style={[styles.refreshText, hideCompleted && styles.refreshTextActive]}>
-              {hideCompleted ? 'Show all' : 'Hide done'}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => navigation.navigate('Settings')}
-            style={({ pressed }) => [styles.refreshButton, pressed && styles.refreshButtonPressed]}
-          >
-            <Text style={styles.refreshText}>⚙</Text>
+            <Text style={styles.headerBtnText}>⚙</Text>
           </Pressable>
         </View>
       </View>
+
+      {/* Gear dropdown menu */}
+      <Modal
+        visible={menuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuOpen(false)}
+      >
+        <Pressable style={styles.menuBackdrop} onPress={() => setMenuOpen(false)}>
+          <View style={styles.menuPanel}>
+            <Pressable
+              style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
+              onPress={() => { setHideCompleted((v) => !v); setMenuOpen(false); }}
+            >
+              <Text style={styles.menuItemText}>
+                {hideCompleted ? 'Show completed' : 'Hide completed'}
+              </Text>
+              {hideCompleted && <Text style={styles.menuItemCheck}>✓</Text>}
+            </Pressable>
+            <View style={styles.menuDivider} />
+            <Pressable
+              style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
+              onPress={() => { setMenuOpen(false); navigation.navigate('Settings'); }}
+            >
+              <Text style={styles.menuItemText}>Settings</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
 
       {error && (
         <View style={styles.errorBanner}>
@@ -100,9 +123,11 @@ export default function BatchSelectScreen(): React.JSX.Element {
           <ActivityIndicator size="large" color="#4f78c7" />
           <Text style={styles.loadingText}>Loading batches…</Text>
         </View>
-      ) : batches.length === 0 ? (
+      ) : displayedBatches.length === 0 ? (
         <View style={styles.center}>
-          <Text style={styles.emptyText}>No batches available</Text>
+          <Text style={styles.emptyText}>
+            {hideCompleted && batches.length > 0 ? 'All batches completed' : 'No batches available'}
+          </Text>
           <Pressable
             onPress={fetchBatches}
             style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
@@ -112,7 +137,7 @@ export default function BatchSelectScreen(): React.JSX.Element {
         </View>
       ) : (
         <FlatList
-          data={hideCompleted ? batches.filter((b) => !b.handtip_complete) : batches}
+          data={displayedBatches}
           keyExtractor={(item) => String(item.batch)}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => {
@@ -175,26 +200,64 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  refreshButton: {
+  headerBtn: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
-  refreshButtonPressed: {
+  headerBtnPressed: {
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
-  refreshButtonActive: {
-    backgroundColor: 'rgba(79,120,199,0.35)',
-  },
-  refreshText: {
+  headerBtnText: {
     color: '#a8bcd8',
     fontSize: 15,
     fontWeight: '700',
   },
-  refreshTextActive: {
-    color: '#ffffff',
+  // Dropdown menu
+  menuBackdrop: {
+    flex: 1,
+    alignItems: 'flex-end',
+    paddingTop: 72,
+    paddingRight: 16,
   },
+  menuPanel: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    minWidth: 180,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 8,
+    overflow: 'hidden',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+  },
+  menuItemPressed: {
+    backgroundColor: '#f0f4fb',
+  },
+  menuItemText: {
+    color: '#1a2744',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  menuItemCheck: {
+    color: '#4f78c7',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#e8edf5',
+    marginHorizontal: 12,
+  },
+  // Banners
   errorBanner: {
     marginHorizontal: 16,
     marginBottom: 12,
@@ -222,6 +285,7 @@ const styles = StyleSheet.create({
     color: '#a8bcd8',
     fontSize: 18,
     fontWeight: '600',
+    textAlign: 'center',
   },
   retryButton: {
     paddingHorizontal: 24,
@@ -259,6 +323,11 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 3,
   },
+  rowTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   rowCode: {
     color: '#1a2744',
     fontSize: 17,
@@ -287,11 +356,6 @@ const styles = StyleSheet.create({
     color: '#4f78c7',
     fontSize: 28,
     fontWeight: '300',
-  },
-  rowTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
   rowDone: {
     backgroundColor: '#f0f2f7',
