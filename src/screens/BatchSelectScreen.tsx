@@ -22,6 +22,7 @@ export default function BatchSelectScreen(): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingBatch, setLoadingBatch] = useState<number | null>(null);
+  const [hideCompleted, setHideCompleted] = useState(false);
 
   const { loadFromSql } = useBatchStore();
   const { reset: resetPicking } = usePickingStore();
@@ -68,6 +69,18 @@ export default function BatchSelectScreen(): React.JSX.Element {
             <Text style={styles.refreshText}>Refresh</Text>
           </Pressable>
           <Pressable
+            onPress={() => setHideCompleted((v) => !v)}
+            style={({ pressed }) => [
+              styles.refreshButton,
+              hideCompleted && styles.refreshButtonActive,
+              pressed && styles.refreshButtonPressed,
+            ]}
+          >
+            <Text style={[styles.refreshText, hideCompleted && styles.refreshTextActive]}>
+              {hideCompleted ? 'Show all' : 'Hide done'}
+            </Text>
+          </Pressable>
+          <Pressable
             onPress={() => navigation.navigate('Settings')}
             style={({ pressed }) => [styles.refreshButton, pressed && styles.refreshButtonPressed]}
           >
@@ -99,7 +112,7 @@ export default function BatchSelectScreen(): React.JSX.Element {
         </View>
       ) : (
         <FlatList
-          data={batches}
+          data={hideCompleted ? batches.filter((b) => !b.handtip_complete) : batches}
           keyExtractor={(item) => String(item.batch)}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => {
@@ -119,6 +132,7 @@ export default function BatchSelectScreen(): React.JSX.Element {
                 <View style={styles.rowLeft}>
                   <View style={styles.rowTitleRow}>
                     <Text style={[styles.rowCode, done && styles.rowCodeDone]}>{item.code}</Text>
+                    <Text style={[styles.rowBatch, done && styles.rowTextDone]}>#{item.batch}</Text>
                     {done && <Text style={styles.rowDoneTag}>Handtip done</Text>}
                   </View>
                   <Text style={[styles.rowDescription, done && styles.rowTextDone]}>{item.description}</Text>
@@ -170,10 +184,16 @@ const styles = StyleSheet.create({
   refreshButtonPressed: {
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
+  refreshButtonActive: {
+    backgroundColor: 'rgba(79,120,199,0.35)',
+  },
   refreshText: {
     color: '#a8bcd8',
     fontSize: 15,
     fontWeight: '700',
+  },
+  refreshTextActive: {
+    color: '#ffffff',
   },
   errorBanner: {
     marginHorizontal: 16,
@@ -243,6 +263,11 @@ const styles = StyleSheet.create({
     color: '#1a2744',
     fontSize: 17,
     fontWeight: '800',
+  },
+  rowBatch: {
+    color: '#8899bb',
+    fontSize: 14,
+    fontWeight: '600',
   },
   rowDescription: {
     color: '#2f3b52',
