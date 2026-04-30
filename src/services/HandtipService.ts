@@ -36,7 +36,7 @@ export interface SqlIngredient {
   Room: number;
   code: string;
   descr: string;
-  bags_qty_int: number;
+  bags: number;
   complete: boolean;
   gin_tracked: boolean;
   track_gin: string;

@@ -107,7 +107,7 @@ export const useBatchStore = create<BatchState>()((set, get) => ({
       const collectedBags = ginEntries.reduce((sum, e) => sum + e.bagCount, 0);
       return {
         name: ing.descr,
-        requiredBags: ing.bags_qty_int,
+        requiredBags: ing.bags,
         collectedBags,
         ginEntries,
         signedOff: Boolean(ing.complete),
