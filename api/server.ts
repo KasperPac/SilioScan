@@ -33,10 +33,12 @@ app.get('/batches', async (_req: Request, res: Response) => {
   const result = await pool.request().query<{
     id: number; batch: number; code: string; description: string;
     required_date_formatted: string; order_date_formatted: string;
+    handtip_complete: boolean;
   }>(`
-    SELECT id, batch, code, description, required_date_formatted, order_date_formatted
+    SELECT id, batch, code, description, required_date_formatted, order_date_formatted,
+           handtip_complete
     FROM dbo.orders
-    WHERE handtip_used = 1 AND handtip_complete = 0
+    WHERE complete = 0
     ORDER BY required_date_raw ASC
   `);
   res.json(result.recordset);

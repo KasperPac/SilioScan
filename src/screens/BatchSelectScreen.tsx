@@ -96,25 +96,30 @@ export default function BatchSelectScreen(): React.JSX.Element {
           contentContainerStyle={styles.list}
           renderItem={({ item }) => {
             const busy = loadingBatch === item.batch;
+            const done = item.handtip_complete;
             return (
               <Pressable
                 onPress={() => handleSelect(item)}
                 disabled={loadingBatch !== null}
                 style={({ pressed }) => [
                   styles.row,
+                  done && styles.rowDone,
                   pressed && !busy && styles.rowPressed,
                   busy && styles.rowBusy,
                 ]}
               >
                 <View style={styles.rowLeft}>
-                  <Text style={styles.rowCode}>{item.code}</Text>
-                  <Text style={styles.rowDescription}>{item.description}</Text>
-                  <Text style={styles.rowDate}>Due: {item.required_date_formatted}</Text>
+                  <View style={styles.rowTitleRow}>
+                    <Text style={[styles.rowCode, done && styles.rowCodeDone]}>{item.code}</Text>
+                    {done && <Text style={styles.rowDoneTag}>Handtip done</Text>}
+                  </View>
+                  <Text style={[styles.rowDescription, done && styles.rowTextDone]}>{item.description}</Text>
+                  <Text style={[styles.rowDate, done && styles.rowTextDone]}>Due: {item.required_date_formatted}</Text>
                 </View>
                 <View style={styles.rowRight}>
                   {busy
                     ? <ActivityIndicator size="small" color="#4f78c7" />
-                    : <Text style={styles.rowArrow}>›</Text>
+                    : <Text style={[styles.rowArrow, done && styles.rowArrowDone]}>›</Text>
                   }
                 </View>
               </Pressable>
@@ -245,5 +250,32 @@ const styles = StyleSheet.create({
     color: '#4f78c7',
     fontSize: 28,
     fontWeight: '300',
+  },
+  rowTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  rowDone: {
+    backgroundColor: '#f0f2f7',
+  },
+  rowCodeDone: {
+    color: '#7a8aaa',
+  },
+  rowDoneTag: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
+    backgroundColor: '#8899bb',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  rowTextDone: {
+    color: '#9aabbf',
+  },
+  rowArrowDone: {
+    color: '#b0c0d8',
   },
 });

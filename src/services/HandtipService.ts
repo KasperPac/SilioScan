@@ -20,6 +20,7 @@ export interface BatchSummary {
   description: string;
   required_date_formatted: string;
   order_date_formatted: string;
+  handtip_complete: boolean;
 }
 
 export interface SqlIngredient {
