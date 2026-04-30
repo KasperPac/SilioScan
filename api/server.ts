@@ -25,6 +25,12 @@ function spErr(rows: sql.IRecordSet<Record<string, unknown>>): string | null {
   return null;
 }
 
+// ── GET / ────────────────────────────────────────────────────────
+
+app.get('/', (_req: Request, res: Response) => {
+  res.json({ status: 'ok', db: process.env.MSSQL_DB ?? 'DB_PLC_RABAR' });
+});
+
 // ── GET /batches ─────────────────────────────────────────────────
 // List orders where handtip is required but not yet complete
 
