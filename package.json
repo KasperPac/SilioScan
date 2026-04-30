@@ -9,6 +9,7 @@
     "start": "react-native start",
     "test": "jest",
     "mock-plc": "ts-node --project tsconfig.node.json mock-plc/server.ts",
+    "api": "npm start --prefix api",
     "start:mock": "concurrently \"npm run mock-plc\" \"npm run start\"",
     "android:mock": "concurrently \"npm run mock-plc\" \"npm run android\""
   },

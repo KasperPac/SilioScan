@@ -124,17 +124,20 @@ export default function SettingsScreen(): React.JSX.Element {
   const scannerMode = useSettingsStore((state) => state.scannerMode);
   const heartbeatIntervalSec = useSettingsStore((state) => state.heartbeatIntervalSec);
   const hwScannerIntentAction = useSettingsStore((state) => state.hwScannerIntentAction);
+  const apiBaseUrl = useSettingsStore((state) => state.apiBaseUrl);
   const setPlcIp = useSettingsStore((state) => state.setPlcIp);
   const setPlcPort = useSettingsStore((state) => state.setPlcPort);
   const setScannerMode = useSettingsStore((state) => state.setScannerMode);
   const setHeartbeatIntervalSec = useSettingsStore((state) => state.setHeartbeatIntervalSec);
   const setHwScannerIntentAction = useSettingsStore((state) => state.setHwScannerIntentAction);
+  const setApiBaseUrl = useSettingsStore((state) => state.setApiBaseUrl);
 
   const [draftPlcIp, setDraftPlcIp] = useState(plcIp);
   const [draftPlcPort, setDraftPlcPort] = useState(String(plcPort));
   const [draftScannerMode, setDraftScannerMode] = useState<ScannerMode>(scannerMode);
   const [draftHeartbeatIntervalSec, setDraftHeartbeatIntervalSec] = useState(heartbeatIntervalSec);
   const [draftIntentAction, setDraftIntentAction] = useState(hwScannerIntentAction);
+  const [draftApiBaseUrl, setDraftApiBaseUrl] = useState(apiBaseUrl);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
 
   useEffect(() => {
@@ -143,7 +146,8 @@ export default function SettingsScreen(): React.JSX.Element {
     setDraftScannerMode(scannerMode);
     setDraftHeartbeatIntervalSec(heartbeatIntervalSec);
     setDraftIntentAction(hwScannerIntentAction);
-  }, [heartbeatIntervalSec, hwScannerIntentAction, plcIp, plcPort, scannerMode]);
+    setDraftApiBaseUrl(apiBaseUrl);
+  }, [apiBaseUrl, heartbeatIntervalSec, hwScannerIntentAction, plcIp, plcPort, scannerMode]);
 
   const handleSave = () => {
     const trimmedIp = draftPlcIp.trim();
@@ -165,6 +169,7 @@ export default function SettingsScreen(): React.JSX.Element {
     setScannerMode(draftScannerMode);
     setHeartbeatIntervalSec(draftHeartbeatIntervalSec);
     setHwScannerIntentAction(trimmedIntentAction);
+    setApiBaseUrl(draftApiBaseUrl.trim());
 
     Alert.alert('Settings Saved', 'Settings have been persisted to local storage.');
   };
@@ -309,6 +314,18 @@ export default function SettingsScreen(): React.JSX.Element {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Advanced</Text>
+
+          <Text style={styles.label}>Handtip API URL</Text>
+          <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            onChangeText={setDraftApiBaseUrl}
+            placeholder="http://192.168.1.100:3000"
+            placeholderTextColor="#7f8795"
+            style={styles.input}
+            value={draftApiBaseUrl}
+          />
 
           <Text style={styles.label}>Hardware scanner intent action</Text>
           <TextInput

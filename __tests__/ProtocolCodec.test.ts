@@ -44,10 +44,10 @@ describe('ProtocolCodec round-trip coverage', () => {
       productDescription: 'Description that is definitely longer than thirty-two bytes',
       ingredientCount: 4,
       ingredients: [
-        { ingredientName: 'Ingredient 01 Name Is Longer Than 32 Bytes', requiredBags: 0x0102 },
-        { ingredientName: 'Ingredient 02', requiredBags: 3 },
-        { ingredientName: 'Ingredient 03', requiredBags: 4 },
-        { ingredientName: 'Ingredient 04', requiredBags: 5 },
+        { ingredientName: 'Ingredient 01 Name Is Longer Than 32 Bytes', requiredBags: 0x0102, signedOff: false },
+        { ingredientName: 'Ingredient 02', requiredBags: 3, signedOff: false },
+        { ingredientName: 'Ingredient 03', requiredBags: 4, signedOff: false },
+        { ingredientName: 'Ingredient 04', requiredBags: 5, signedOff: false },
       ],
     };
 
@@ -69,7 +69,7 @@ describe('ProtocolCodec round-trip coverage', () => {
       batchNo: fixedAscii(msg.batchNo, 16),
       productDescription: fixedAscii(msg.productDescription, 32),
       ingredients: [
-        { ingredientName: fixedAscii(msg.ingredients[0].ingredientName, 32), requiredBags: 0x0102 },
+        { ingredientName: fixedAscii(msg.ingredients[0].ingredientName, 32), requiredBags: 0x0102, signedOff: false },
         msg.ingredients[1],
         msg.ingredients[2],
         msg.ingredients[3],

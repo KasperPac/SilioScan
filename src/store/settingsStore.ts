@@ -34,11 +34,15 @@ interface SettingsState {
    */
   hwScannerIntentAction: string;
 
+  /** Base URL of the handtip REST API, e.g. http://192.168.1.100:3000 */
+  apiBaseUrl: string;
+
   setPlcIp: (ip: string) => void;
   setPlcPort: (port: number) => void;
   setScannerMode: (mode: ScannerMode) => void;
   setHeartbeatIntervalSec: (seconds: number) => void;
   setHwScannerIntentAction: (action: string) => void;
+  setApiBaseUrl: (url: string) => void;
 }
 
 // ── Store ────────────────────────────────────────────────────
@@ -51,12 +55,14 @@ export const useSettingsStore = create<SettingsState>()(
       scannerMode: 'auto',
       heartbeatIntervalSec: 5,
       hwScannerIntentAction: 'com.pacscanner.SCAN',
+      apiBaseUrl: 'http://192.168.1.100:3000',
 
       setPlcIp: (plcIp) => set({ plcIp }),
       setPlcPort: (plcPort) => set({ plcPort }),
       setScannerMode: (scannerMode) => set({ scannerMode }),
       setHeartbeatIntervalSec: (heartbeatIntervalSec) => set({ heartbeatIntervalSec }),
       setHwScannerIntentAction: (hwScannerIntentAction) => set({ hwScannerIntentAction }),
+      setApiBaseUrl: (apiBaseUrl) => set({ apiBaseUrl }),
     }),
     {
       name: 'pac-scanner-settings',

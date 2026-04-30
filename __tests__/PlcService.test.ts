@@ -313,7 +313,7 @@ describe('PlcService', () => {
         batchNo: 'B-001',
         productDescription: 'Test Product',
         ingredientCount: 1,
-        ingredients: [{ ingredientName: 'Test Ingredient', requiredBags: 3 }],
+        ingredients: [{ ingredientName: 'Test Ingredient', requiredBags: 3, signedOff: false }],
       };
 
       const received = jest.fn();

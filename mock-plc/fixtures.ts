@@ -16,10 +16,10 @@ export const FIXTURE_BATCH_RECIPE: BatchRecipeMsg = {
   productDescription: 'Premium Dog Kibble',
   ingredientCount: 4,
   ingredients: [
-    { ingredientName: 'Wheat Flour',    requiredBags: 6 },
-    { ingredientName: 'Soy Meal',       requiredBags: 4 },
-    { ingredientName: 'Bone Meal',      requiredBags: 2 },
-    { ingredientName: 'Vitamin Premix', requiredBags: 2 },
+    { ingredientName: 'Wheat Flour',    requiredBags: 6, signedOff: false },
+    { ingredientName: 'Soy Meal',       requiredBags: 4, signedOff: false },
+    { ingredientName: 'Bone Meal',      requiredBags: 2, signedOff: false },
+    { ingredientName: 'Vitamin Premix', requiredBags: 2, signedOff: false },
   ],
 };
 
@@ -50,6 +50,6 @@ export const FIXTURE_BATCH_RECIPE_SMALL: BatchRecipeMsg = {
   productDescription: 'Cat Food Standard',
   ingredientCount: 1,
   ingredients: [
-    { ingredientName: 'Fish Meal', requiredBags: 3 },
+    { ingredientName: 'Fish Meal', requiredBags: 3, signedOff: false },
   ],
 };

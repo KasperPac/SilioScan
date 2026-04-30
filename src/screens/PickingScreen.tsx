@@ -40,12 +40,13 @@ import {
   nfcService,
 } from '../services/NfcService';
 import { plcService } from '../services/PlcService';
+import { handtipService, parseUserCode } from '../services/HandtipService';
 import { scannerService } from '../services/ScannerService';
 import { useBatchStore } from '../store/batchStore';
 import { useConnectionStore } from '../store/connectionStore';
 import { usePickingStore } from '../store/pickingStore';
 import { useSettingsStore } from '../store/settingsStore';
-import type { BatchRecipeMsg, GinValidationMsg } from '../types/protocol';
+import type { BatchRecipeMsg, GinValidationMsg, SignoffAckMsg } from '../types/protocol';
 import { vibrateFail, vibrateSignoff, vibrateSuccess } from '../utils/audio';
 
 // ── Component ─────────────────────────────────────────────────
@@ -54,7 +55,7 @@ export default function PickingScreen(): React.JSX.Element {
   // ── Store reads ──────────────────────────────────────────────
   const {
     productCode, batchNo, description,
-    ingredients, batchStatus,
+    ingredients, batchStatus, sqlBatch,
     setBatchRecipe, updateIngredientProgress, signOffIngredient,
   } = useBatchStore();
 
@@ -152,26 +153,38 @@ export default function PickingScreen(): React.JSX.Element {
   /**
    * Called by ScannerService whenever a barcode arrives (HW or camera).
    * Reads current phase from store synchronously — no stale closure.
+   * SQL batches: accept GINs immediately (no PLC validation needed).
+   * PLC batches: validate via PlcService as before.
    */
   const handleGinScanned = useCallback(async (gin: string) => {
-    if (plcService.connectionState !== 'connected') return;
-
     const { phase: currentPhase, activeIngredientIndex: idx } =
       usePickingStore.getState();
 
     if (currentPhase !== 'AWAITING_SCAN' || idx === null) return;
 
-    onGinScanned(gin);
+    const { sqlBatch: batch } = useBatchStore.getState();
 
-    try {
-      const result: GinValidationMsg = await plcService.sendGinScan(idx, gin);
-      onGinValidated(result);
-      if (result.valid) vibrateSuccess();
-      else vibrateFail();
-    } catch {
-      vibrateFail();
-      // Comms error — return to AWAITING_SCAN by re-selecting the ingredient
-      selectIngredient(idx);
+    if (batch !== null) {
+      // SQL path — GINs are recorded on sign-off, accept immediately
+      onGinScanned(gin);
+      const syntheticValid: GinValidationMsg = {
+        msgType: 0x81, seqNum: 0, gin, valid: true, ingredientName: '', rejectReason: '',
+      };
+      onGinValidated(syntheticValid);
+      vibrateSuccess();
+    } else {
+      // PLC path
+      if (plcService.connectionState !== 'connected') return;
+      onGinScanned(gin);
+      try {
+        const result: GinValidationMsg = await plcService.sendGinScan(idx, gin);
+        onGinValidated(result);
+        if (result.valid) vibrateSuccess();
+        else vibrateFail();
+      } catch {
+        vibrateFail();
+        selectIngredient(idx);
+      }
     }
   }, [onGinScanned, onGinValidated, selectIngredient]);
 
@@ -191,41 +204,85 @@ export default function PickingScreen(): React.JSX.Element {
 
   /**
    * Called when NFC tag UID is read successfully.
-   * Advances to NFC_SIGNING, fires INGREDIENT_SIGNOFF to PLC.
+   * SQL batches: look up operator in DB, record GINs + complete via API.
+   * PLC batches: fire INGREDIENT_SIGNOFF as before.
    */
-  const handleNfcTagRead = useCallback(async (operatorId: string) => {
+  const handleNfcTagRead = useCallback(async (uid: string) => {
     const { activeIngredientIndex: idx } = usePickingStore.getState();
     if (idx === null) return;
-
-    onNfcTapped(operatorId);
 
     const ingredient = useBatchStore.getState().ingredients[idx];
     if (!ingredient) return;
 
-    try {
-      const result = await plcService.sendIngredientSignoff({
-        ingredientIndex: idx,
-        operatorId,
-        ginCount: ingredient.ginEntries.length,
-        ginEntries: ingredient.ginEntries.map((e) => ({
-          gin: e.gin,
-          bagCount: e.bagCount,
-        })),
-      });
+    const { sqlBatch: batch } = useBatchStore.getState();
 
-      onSignoffAck(result);
+    if (batch !== null) {
+      // SQL path
+      onNfcTapped(uid);
+      try {
+        const userCode = parseUserCode(uid);
+        const user = await handtipService.lookupUser(userCode);
 
-      if (result.accepted) {
+        // Record every GIN entry for this ingredient (positions are 1-based)
+        await Promise.all(
+          ingredient.ginEntries.map((entry, i) =>
+            handtipService.recordGin(batch, {
+              indexNumber: i + 1,
+              ingredientIndex: ingredient.sqlIndexNumber!,
+              gin: entry.gin,
+              bagsAdded: entry.bagCount,
+            }),
+          ),
+        );
+
+        await handtipService.markIngredientComplete(batch, ingredient.sqlIndexNumber!);
+
+        const ack: SignoffAckMsg = {
+          msgType: 0x82, seqNum: 0, ingredientIndex: idx, accepted: true, rejectReason: '',
+        };
+        onSignoffAck(ack);
         vibrateSignoff();
-        signOffIngredient(idx, operatorId);
-      } else {
+        signOffIngredient(idx, user.user_name);
+
+        // Fire batch signoff when all ingredients are done
+        const { batchStatus } = useBatchStore.getState();
+        if (batchStatus === 'complete') {
+          await handtipService.signoff(batch, {
+            userCode: user.user_code,
+            userLevel: user.user_level,
+            userName: user.user_name,
+          });
+        }
+      } catch {
         vibrateFail();
-        // onSignoffAck already moved phase back to READY_FOR_SIGNOFF
-        // which will re-trigger the NFC useEffect
+        setPhase('READY_FOR_SIGNOFF');
       }
-    } catch {
-      vibrateFail();
-      setPhase('READY_FOR_SIGNOFF'); // comms error — let operator re-tap
+    } else {
+      // PLC path
+      onNfcTapped(uid);
+      try {
+        const result = await plcService.sendIngredientSignoff({
+          ingredientIndex: idx,
+          operatorId: uid,
+          ginCount: ingredient.ginEntries.length,
+          ginEntries: ingredient.ginEntries.map((e) => ({
+            gin: e.gin,
+            bagCount: e.bagCount,
+          })),
+        });
+
+        onSignoffAck(result);
+
+        if (result.accepted) {
+          vibrateSignoff();
+          signOffIngredient(idx, uid);
+        } else {
+          vibrateFail();
+        }
+      } catch {
+        vibrateFail();
+        setPhase('READY_FOR_SIGNOFF');
+      }
     }
   }, [onNfcTapped, onSignoffAck, signOffIngredient, setPhase]);
 
@@ -260,7 +317,7 @@ export default function PickingScreen(): React.JSX.Element {
 
   // ── Render ────────────────────────────────────────────────────
 
-  // Batch complete — show summary overlay inline (Phase 3 will navigate)
+  // Batch complete
   if (batchStatus === 'complete') {
     return (
       <SafeAreaView style={styles.root}>
@@ -269,35 +326,25 @@ export default function PickingScreen(): React.JSX.Element {
           batchNo={batchNo}
           description={description}
           ingredients={ingredients}
+          onNextBatch={() => navigation.navigate('BatchSelect')}
         />
         <ConnectionBadge status={status} />
       </SafeAreaView>
     );
   }
 
-  // No batch yet — waiting for PLC to push BATCH_RECIPE
+  // No batch loaded — navigate to BatchSelect
   if (batchStatus === 'idle') {
     return (
       <SafeAreaView style={styles.root}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open menu"
-          hitSlop={12}
-          onPress={openSettings}
-          style={({ pressed }) => [
-            styles.menuButton,
-            pressed && styles.menuButtonPressed,
-          ]}
-        >
-          <View style={styles.menuLine} />
-          <View style={styles.menuLine} />
-          <View style={styles.menuLine} />
-        </Pressable>
         <View style={styles.waiting}>
-          <Text style={styles.waitingTitle}>Awaiting batch…</Text>
-          <Text style={styles.waitingBody}>
-            Select a batch on the HMI to begin.
-          </Text>
+          <Text style={styles.waitingTitle}>No batch loaded</Text>
+          <Pressable
+            onPress={() => navigation.navigate('BatchSelect')}
+            style={({ pressed }) => [styles.selectBatchButton, pressed && styles.selectBatchButtonPressed]}
+          >
+            <Text style={styles.selectBatchText}>Select Batch</Text>
+          </Pressable>
         </View>
         <ConnectionBadge status={status} />
       </SafeAreaView>
@@ -409,10 +456,11 @@ interface BatchCompletePanelProps {
   batchNo: string;
   description: string;
   ingredients: ReturnType<typeof useBatchStore.getState>['ingredients'];
+  onNextBatch: () => void;
 }
 
 function BatchCompletePanel({
-  productCode, batchNo, description, ingredients,
+  productCode, batchNo, description, ingredients, onNextBatch,
 }: BatchCompletePanelProps): React.JSX.Element {
   return (
     <ScrollView contentContainerStyle={styles.completeContainer}>
@@ -429,14 +477,19 @@ function BatchCompletePanel({
             <Text style={styles.completeIngredientName}>{ing.name}</Text>
             <Text style={styles.completeIngredientMeta}>
               {ing.collectedBags} bags · {ing.ginEntries.length} GIN{ing.ginEntries.length !== 1 ? 's' : ''}
-              {ing.operatorId ? `  ·  op: ${ing.operatorId.slice(0, 8)}` : ''}
+              {ing.operatorId ? `  ·  op: ${ing.operatorId}` : ''}
             </Text>
           </View>
         </View>
       ))}
 
       <View style={styles.completeDivider} />
-      <Text style={styles.completeFooter}>Awaiting next batch…</Text>
+      <Pressable
+        onPress={onNextBatch}
+        style={({ pressed }) => [styles.nextBatchButton, pressed && styles.nextBatchButtonPressed]}
+      >
+        <Text style={styles.nextBatchText}>Next Batch</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -510,12 +563,21 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 28,
     fontWeight: '800',
-    marginBottom: 12,
+    marginBottom: 20,
   },
-  waitingBody: {
-    color: '#a8bcd8',
-    fontSize: 16,
-    textAlign: 'center',
+  selectBatchButton: {
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 14,
+    backgroundColor: '#4f78c7',
+  },
+  selectBatchButtonPressed: {
+    backgroundColor: '#3d62ae',
+  },
+  selectBatchText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '800',
   },
   // Batch complete
   completeContainer: {
@@ -572,12 +634,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
-  completeFooter: {
-    color: '#8899bb',
-    fontSize: 15,
-    textAlign: 'center',
-    fontStyle: 'italic',
+  nextBatchButton: {
     marginTop: 8,
+    paddingVertical: 16,
+    borderRadius: 14,
+    backgroundColor: '#4f78c7',
+    alignItems: 'center',
+  },
+  nextBatchButtonPressed: {
+    backgroundColor: '#3d62ae',
+  },
+  nextBatchText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '800',
   },
   // Disconnect overlay
   disconnectOverlay: {

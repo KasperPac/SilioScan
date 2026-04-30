@@ -6,6 +6,7 @@
 
 import { create } from 'zustand';
 import { BatchRecipeMsg } from '../types/protocol';
+import type { BatchDetail } from '../services/HandtipService';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -24,6 +25,8 @@ export interface IngredientProgress {
   ginEntries: IngredientGinEntry[];
   signedOff: boolean;
   operatorId: string | null;
+  /** order_lines.index_number — only set for SQL-sourced batches. */
+  sqlIndexNumber?: number;
 }
 
 // ── Store ────────────────────────────────────────────────────
@@ -35,8 +38,14 @@ interface BatchState {
   ingredients: IngredientProgress[];
   batchStatus: 'idle' | 'active' | 'complete';
 
+  /** Numeric batch ID — set for SQL-sourced batches, null for PLC batches. */
+  sqlBatch: number | null;
+
   /** Populate store from an incoming BATCH_RECIPE PLC message. */
   setBatchRecipe: (recipe: BatchRecipeMsg) => void;
+
+  /** Populate store from a SQL batch loaded via HandtipService. */
+  loadFromSql: (batch: number, detail: BatchDetail) => void;
 
   /** Add a validated GIN entry (with bag count) for one ingredient. */
   updateIngredientProgress: (index: number, entry: IngredientGinEntry) => void;
@@ -52,13 +61,14 @@ interface BatchState {
 }
 
 const EMPTY: Omit<BatchState,
-  'setBatchRecipe' | 'updateIngredientProgress' | 'signOffIngredient' | 'isBatchComplete' | 'reset'
+  'setBatchRecipe' | 'loadFromSql' | 'updateIngredientProgress' | 'signOffIngredient' | 'isBatchComplete' | 'reset'
 > = {
   productCode: '',
   batchNo: '',
   description: '',
   ingredients: [],
   batchStatus: 'idle',
+  sqlBatch: null,
 };
 
 export const useBatchStore = create<BatchState>()((set, get) => ({
@@ -79,6 +89,39 @@ export const useBatchStore = create<BatchState>()((set, get) => ({
       batchNo: recipe.batchNo,
       description: recipe.productDescription,
       batchStatus: allDone ? 'complete' : 'active',
+      sqlBatch: null,
+      ingredients,
+    });
+  },
+
+  loadFromSql: (batch, detail) => {
+    const ingredients: IngredientProgress[] = detail.ingredients.map((ing) => {
+      const existingGins = detail.gins.filter(
+        (g) => g.ingredient_index === ing.index_number,
+      );
+      const ginEntries: IngredientGinEntry[] = existingGins.map((g) => ({
+        gin: g.gin,
+        bagCount: g.bags_added,
+        validated: true,
+      }));
+      const collectedBags = ginEntries.reduce((sum, e) => sum + e.bagCount, 0);
+      return {
+        name: ing.descr,
+        requiredBags: ing.bags_qty_int,
+        collectedBags,
+        ginEntries,
+        signedOff: Boolean(ing.complete),
+        operatorId: null,
+        sqlIndexNumber: ing.index_number,
+      };
+    });
+    const allDone = ingredients.length > 0 && ingredients.every((ing) => ing.signedOff);
+    set({
+      productCode: detail.order.code,
+      batchNo: String(detail.order.batch),
+      description: detail.order.description,
+      batchStatus: allDone ? 'complete' : 'active',
+      sqlBatch: batch,
       ingredients,
     });
   },
