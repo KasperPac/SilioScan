@@ -59,13 +59,21 @@ export default function BatchSelectScreen(): React.JSX.Element {
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
         <Text style={styles.title}>Select Batch</Text>
-        <Pressable
-          onPress={fetchBatches}
-          disabled={loading}
-          style={({ pressed }) => [styles.refreshButton, pressed && styles.refreshButtonPressed]}
-        >
-          <Text style={styles.refreshText}>Refresh</Text>
-        </Pressable>
+        <View style={styles.headerButtons}>
+          <Pressable
+            onPress={fetchBatches}
+            disabled={loading}
+            style={({ pressed }) => [styles.refreshButton, pressed && styles.refreshButtonPressed]}
+          >
+            <Text style={styles.refreshText}>Refresh</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => navigation.navigate('Settings')}
+            style={({ pressed }) => [styles.refreshButton, pressed && styles.refreshButtonPressed]}
+          >
+            <Text style={styles.refreshText}>⚙</Text>
+          </Pressable>
+        </View>
       </View>
 
       {error && (
@@ -148,6 +156,10 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 28,
     fontWeight: '800',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
   },
   refreshButton: {
     paddingHorizontal: 14,

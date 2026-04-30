@@ -4,7 +4,7 @@
 //
 // Env vars: MSSQL_HOST, MSSQL_PORT, MSSQL_USER, MSSQL_PASSWORD, MSSQL_DB, API_PORT
 
-import express, { Request, Response } from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import sql from 'mssql';
 import { getPool } from './db';
 
@@ -25,6 +25,11 @@ function spErr(rows: sql.IRecordSet<Record<string, unknown>>): string | null {
   return null;
 }
 
+// Wrap async route handlers so unhandled rejections go to the error middleware.
+function h(fn: (req: Request, res: Response) => Promise<void>) {
+  return (req: Request, res: Response, next: NextFunction) => fn(req, res).catch(next);
+}
+
 // ── GET / ────────────────────────────────────────────────────────
 
 app.get('/', (_req: Request, res: Response) => {
@@ -32,9 +37,8 @@ app.get('/', (_req: Request, res: Response) => {
 });
 
 // ── GET /batches ─────────────────────────────────────────────────
-// List orders where handtip is required but not yet complete
 
-app.get('/batches', async (_req: Request, res: Response) => {
+app.get('/batches', h(async (_req, res) => {
   const pool = await getPool();
   const result = await pool.request().query<{
     id: number; batch: number; code: string; description: string;
@@ -48,12 +52,11 @@ app.get('/batches', async (_req: Request, res: Response) => {
     ORDER BY required_date_raw ASC
   `);
   res.json(result.recordset);
-});
+}));
 
 // ── GET /batches/:batch ──────────────────────────────────────────
-// Batch header + handtip ingredients (Room 4) + existing GINs
 
-app.get('/batches/:batch', async (req: Request, res: Response) => {
+app.get('/batches/:batch', h(async (req, res) => {
   const batch = parseInt(req.params.batch as string, 10);
   if (isNaN(batch)) { res.status(400).json({ error: 'invalid batch' }); return; }
 
@@ -82,12 +85,11 @@ app.get('/batches/:batch', async (req: Request, res: Response) => {
     ingredients: linesRes.recordset.filter((r: Record<string, unknown>) => r.Room === HANDTIP_ROOM),
     gins: ginRes.recordset,
   });
-});
+}));
 
-// ── GET /users/lookup?payroll=<value> ────────────────────────────
-// Resolve NFC card value to a rabar_user row
+// ── GET /users/lookup?code=<int> ─────────────────────────────────
 
-app.get('/users/lookup', async (req: Request, res: Response) => {
+app.get('/users/lookup', h(async (req, res) => {
   const code = parseInt(req.query.code as string, 10);
   if (isNaN(code)) {
     res.status(400).json({ error: 'code query param required (integer)' });
@@ -103,13 +105,11 @@ app.get('/users/lookup', async (req: Request, res: Response) => {
 
   if (result.recordset.length === 0) { res.status(404).json({ error: 'user not found' }); return; }
   res.json(result.recordset[0]);
-});
+}));
 
 // ── POST /batches/:batch/gins ────────────────────────────────────
-// Record a GIN scan for a handtip ingredient (UPSERT)
-// Body: { indexNumber, ingredientIndex, gin, bagsAdded }
 
-app.post('/batches/:batch/gins', async (req: Request, res: Response) => {
+app.post('/batches/:batch/gins', h(async (req, res) => {
   const batch = parseInt(req.params.batch as string, 10);
   const { indexNumber, ingredientIndex, gin, bagsAdded } = req.body as {
     indexNumber: number; ingredientIndex: number; gin: string; bagsAdded?: number;
@@ -131,13 +131,11 @@ app.post('/batches/:batch/gins', async (req: Request, res: Response) => {
     .execute('dbo.UpdateOrderLinesGinTable_SP_V1');
 
   res.json(result.recordset[0]);
-});
+}));
 
 // ── POST /batches/:batch/ingredients/complete ────────────────────
-// Mark a handtip ingredient as done
-// Body: { indexNumber }
 
-app.post('/batches/:batch/ingredients/complete', async (req: Request, res: Response) => {
+app.post('/batches/:batch/ingredients/complete', h(async (req, res) => {
   const batch = parseInt(req.params.batch as string, 10);
   const { indexNumber } = req.body as { indexNumber: number };
 
@@ -156,13 +154,11 @@ app.post('/batches/:batch/ingredients/complete', async (req: Request, res: Respo
   const err = spErr(result.recordset);
   if (err) { res.status(400).json({ error: err }); return; }
   res.json(result.recordset[0]);
-});
+}));
 
 // ── POST /batches/:batch/signoff ─────────────────────────────────
-// Complete handtip for a batch (NFC sign-off)
-// Body: { userCode, userLevel, userName }
 
-app.post('/batches/:batch/signoff', async (req: Request, res: Response) => {
+app.post('/batches/:batch/signoff', h(async (req, res) => {
   const batch = parseInt(req.params.batch as string, 10);
   const { userCode, userLevel, userName } = req.body as {
     userCode: number; userLevel: number; userName: string;
@@ -184,6 +180,14 @@ app.post('/batches/:batch/signoff', async (req: Request, res: Response) => {
   const err = spErr(result.recordset);
   if (err) { res.status(400).json({ error: err }); return; }
   res.json(result.recordset[0]);
+}));
+
+// ── error middleware ─────────────────────────────────────────────
+
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  const message = err instanceof Error ? err.message : String(err);
+  console.error('[api error]', message);
+  res.status(500).json({ error: message });
 });
 
 // ── startup ──────────────────────────────────────────────────────

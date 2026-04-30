@@ -2,11 +2,18 @@ import { useSettingsStore } from '../store/settingsStore';
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const base = useSettingsStore.getState().apiBaseUrl;
-  const res = await fetch(`${base}${path}`, {
+  const url = `${base}${path}`;
+  const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
     ...init,
   });
-  const body = await res.json() as Record<string, unknown>;
+  const text = await res.text();
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    throw new Error(`Bad response from ${url} (HTTP ${res.status}): ${text.slice(0, 120)}`);
+  }
   if (!res.ok) throw new Error((body.error as string) ?? `HTTP ${res.status}`);
   return body as T;
 }
