@@ -62,19 +62,21 @@ app.get('/batches/:batch', h(async (req, res) => {
 
   const pool = await getPool();
 
+  const makeSPReq = (selector: number) =>
+    pool.request()
+      .input('Inbatch', sql.Int, batch)
+      .input('InN_OrderTableToSelect', sql.Int, selector)
+      .input('Room', sql.Int, HANDTIP_ROOM)
+      .input('Code', sql.NVarChar, '')
+      .output('status_msg', sql.VarChar)
+      .output('code_msg', sql.Int)
+      .output('Room_msg', sql.Int)
+      .execute('dbo.SelectOrder_SP_V1');
+
   const [orderRes, linesRes, ginRes] = await Promise.all([
-    pool.request()
-      .input('Inbatch', sql.Int, batch)
-      .input('InN_OrderTableToSelect', sql.Int, 1)
-      .execute('dbo.SelectOrder_SP_V1'),
-    pool.request()
-      .input('Inbatch', sql.Int, batch)
-      .input('InN_OrderTableToSelect', sql.Int, 2)
-      .execute('dbo.SelectOrder_SP_V1'),
-    pool.request()
-      .input('Inbatch', sql.Int, batch)
-      .input('InN_OrderTableToSelect', sql.Int, 3)
-      .execute('dbo.SelectOrder_SP_V1'),
+    makeSPReq(1),
+    makeSPReq(2),
+    makeSPReq(3),
   ]);
 
   const orderErr = spErr(orderRes.recordset);
