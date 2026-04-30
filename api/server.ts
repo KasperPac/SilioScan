@@ -186,8 +186,8 @@ app.post('/batches/:batch/signoff', h(async (req, res) => {
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const message = err instanceof Error ? err.message : String(err);
-  console.error('[api error]', message);
-  res.status(500).json({ error: message });
+  console.error('[api error]', err);
+  res.status(500).json({ error: message || String(err) });
 });
 
 // ── startup ──────────────────────────────────────────────────────
