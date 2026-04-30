@@ -328,7 +328,7 @@ export default function PickingScreen(): React.JSX.Element {
           ingredients={ingredients}
           onNextBatch={() => navigation.navigate('BatchSelect')}
         />
-        <ConnectionBadge status={status} />
+        {sqlBatch === null && <ConnectionBadge status={status} />}
       </SafeAreaView>
     );
   }
@@ -346,7 +346,7 @@ export default function PickingScreen(): React.JSX.Element {
             <Text style={styles.selectBatchText}>Select Batch</Text>
           </Pressable>
         </View>
-        <ConnectionBadge status={status} />
+        {sqlBatch === null && <ConnectionBadge status={status} />}
       </SafeAreaView>
     );
   }
@@ -419,8 +419,8 @@ export default function PickingScreen(): React.JSX.Element {
         onCancel={handleNfcCancel}
       />
 
-      <DisconnectOverlay status={status} />
-      <ConnectionBadge status={status} />
+      {sqlBatch === null && <DisconnectOverlay status={status} />}
+      {sqlBatch === null && <ConnectionBadge status={status} />}
     </SafeAreaView>
   );
 }
